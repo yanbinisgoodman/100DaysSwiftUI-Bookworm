@@ -8,6 +8,25 @@
 import SwiftUI
 import CoreData
 
+struct PushButton: View {
+    let title: String
+    @Binding var isOn: Bool
+    
+    var onColors = [Color.red, Color.yellow]
+    var offColors = [Color(white: 0.6), Color(white: 0.4)]
+    
+    var body: some View {
+        Button(title) {
+            self.isOn.toggle()
+        }
+        .padding()
+        .background(LinearGradient(gradient: Gradient(colors: isOn ? onColors : offColors), startPoint: .top, endPoint: .bottom))
+        .foregroundColor(.white)
+        .clipShape(Capsule())
+        .shadow(radius: isOn ? 0 : 5)
+    }
+}
+
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
 
@@ -16,8 +35,104 @@ struct ContentView: View {
         animation: .default)
     private var items: FetchedResults<Item>
 
+/*    @State private var rememberMe = false
+    
+    @Environment(\.horizontalSizeClass) var sizeClass
+    
+    @Environment(\.managedObjectContext) var moc
+    @FetchRequest(entity: Student.entity(), sortDescriptors: []) var students: FetchedResults<Student> */
+    
+    @Environment(\.managedObjectContext) var moc
+    @FetchRequest(entity: Book.entity(), sortDescriptors: [
+        NSSortDescriptor(keyPath: \Book.title, ascending: true),
+        NSSortDescriptor(keyPath: \Book.author, ascending: true)
+    ]) var books: FetchedResults<Book>
+    @State private var showingAddScreen = false
+    
     var body: some View {
-        List {
+        NavigationView {
+            List {
+                ForEach(books, id: \.self) { book in
+                    NavigationLink(destination: DetailView(book: book)) {
+                        EmojiRatingView(rating: book.rating)
+                            .font(.largeTitle)
+                        
+                        VStack(alignment: .leading) {
+                            Text(book.title ?? "Unknown title")
+                                .font(.headline)
+                                .foregroundColor(book.rating == 1 ? .red : .primary)
+                            Text(book.author ?? "Unknown author")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .onDelete(perform: deleteBooks)
+            }
+            .navigationBarTitle("Bookworm")
+            .toolbar(content: {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        self.showingAddScreen.toggle()
+                    }) {
+                        Image(systemName: "plus")
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarLeading) {
+                    EditButton()
+                }
+            })
+            .sheet(isPresented: $showingAddScreen, content: {
+                AddBookView().environment(\.managedObjectContext, self.moc)
+            })
+        }
+        
+        
+        
+/*        VStack {
+            List {
+                ForEach(students, id: \.id) { student in
+                    Text(student.name ?? "Unknown")
+                }
+            }
+            
+            Button("Add") {
+                let firstName = ["Ginny", "Harry", "Hermione", "Luna", "Ron"]
+                let lastName = ["Granger", "Lovegood", "Potter", "Weasley"]
+                
+                let chosenFirstName = firstName.randomElement()!
+                let chosenLastName = lastName.randomElement()!
+                
+                let student = Student(context: self.moc)
+                student.id = UUID()
+                student.name = "\(chosenFirstName) \(chosenLastName)"
+                
+                try? self.moc.save()
+            }
+        } */
+        
+/*        if sizeClass == .compact {
+            return AnyView(VStack {
+                Text("Active size class:")
+                Text("COMPACT")
+            }
+            .font(.largeTitle))
+        } else {
+            return AnyView(HStack {
+                Text("Active size class:")
+                Text("REGULAR")
+            }
+            .font(.largeTitle))
+        } */
+        
+        
+/*        VStack {
+            PushButton(title: "Remember Me", isOn: $rememberMe)
+            Text(rememberMe ? "On" : "Off")
+        } */
+        
+        
+/*        List {
             ForEach(items) { item in
                 Text("Item at \(item.timestamp!, formatter: itemFormatter)")
             }
@@ -31,7 +146,7 @@ struct ContentView: View {
             Button(action: addItem) {
                 Label("Add Item", systemImage: "plus")
             }
-        }
+        } */
     }
 
     private func addItem() {
@@ -63,6 +178,16 @@ struct ContentView: View {
                 fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
             }
         }
+    }
+}
+
+extension ContentView {
+    func deleteBooks(at offsets: IndexSet) {
+        for offset in offsets {
+            let book = books[offset]
+            moc.delete(book)
+        }
+        try? moc.save()
     }
 }
 
