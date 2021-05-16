@@ -25,6 +25,9 @@ struct RatingView: View {
                 self.image(for: number)
                     .foregroundColor(number > self.rating ? self.offColor : onColor)
                     .onTapGesture { self.rating = number }
+                    .accessibility(label: Text("\(number == 1 ? "1 star" : "\(number) of stars")"))
+                    .accessibility(removeTraits: .isImage)
+                    .accessibility(addTraits: number > self.rating ? .isButton : [.isButton, .isSelected])
             }
         }
     }
